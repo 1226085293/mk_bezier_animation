@@ -1,0 +1,23 @@
+# This file will tell ESLint which files and folders it should never lint.
+
+node_modules
+
+*.d.ts
+
+*.js
+
+build
+
+temp
+
+library
+
+local
+
+native
+
+profiles
+
+settings
+
+build-related
