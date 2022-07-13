@@ -41,6 +41,8 @@ export class RollingLottery extends Component {
     private _ItemSize: cc.Size;
     /** 运动状态 */
     private _scrollB = false;
+    /** 自己矩形 */
+    private _selfRect = cc.rect();
     /* --------------- 临时变量 --------------- */
     private _tempM4 = cc.mat4();
     private _temp2M4 = cc.mat4();
@@ -51,16 +53,40 @@ export class RollingLottery extends Component {
         this._initEvent();
     }
     /* ------------------------------- 功能 ------------------------------- */
-    /** 获取格子移动后距离 */
+    /**
+     * 获取格子移动后距离
+     * @param currIndexN_ 当前格子下标
+     * @param targetIndexN_ 目标格子下标
+     * @returns
+     */
     private _getItemMovePos(currIndexN_: number, targetIndexN_: number): void {
-        /** 格子距离 */
-        let boxDistN = this.dire === RollingLotteryDirection.HORIZONTAL ? this._ItemSize.width : this._ItemSize.height;
+        /** 当前节点 */
+        let currNode = this.node.getChildByName(currIndexN_ + '');
+        /** 节点矩形 */
+        let currRect = this._getBoundingBoxToWorld(currNode);
         /** 移动距离 */
-        let moveDistN = (targetIndexN_ - currIndexN_) * boxDistN;
+        let moveDistV3 = cc.v3(this._ItemSize.x, this._ItemSize.y).multiplyScalar(targetIndexN_ - currIndexN_);
+        /** 移动距离 */
+        let moveDistN: number;
+        if (this.dire === RollingLotteryDirection.HORIZONTAL) {
+            moveDistV3.y = 0;
+            moveDistN = moveDistV3.x;
+        } else {
+            moveDistV3.x = 0;
+            moveDistN = moveDistV3.y;
+        }
+        currRect.x += moveDistV3.x;
+        currRect.y += moveDistV3.y;
+
+        /** 终点坐标 */
+        let endPosV3 = this.node
+            .getChildByName(currIndexN_ + '')
+            .worldPosition.clone()
+            .add(moveDistV3);
         /** 圈数 */
         let circleN = Math.floor(moveDistN / this._perimeterN);
-        /** 额外移动距离 */
-        let extraMoveDistN = moveDistN - circleN * this._perimeterN;
+        // /** 额外移动距离 */
+        // let extraMoveDistN = moveDistN - circleN * this._perimeterN;
     }
 
     /** 获取在世界坐标系下的节点包围盒(不包含自身激活的子节点范围) */
@@ -134,6 +160,9 @@ export class RollingLottery extends Component {
             let distV3 = this.node.worldPosition.clone().subtract(this.node.children[0].worldPosition);
             this._currDistN = this.dire === RollingLotteryDirection.HORIZONTAL ? distV3.x : distV3.y;
         }
+
+        // 自己矩形
+        this._selfRect = this._getBoundingBoxToWorld(this.node);
 
         this._updateData();
     }
