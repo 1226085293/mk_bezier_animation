@@ -139,9 +139,6 @@ export class BezierCurveAnimation extends Component {
                         if (lastTweenIndexN !== tweenIndexN) {
                             this.tweenSwitchEvent?.emit([lastTweenIndexN]);
                         }
-                        if (y2N === undefined) {
-                            debugger;
-                        }
                         // 更新事件触发
                         this.updateEvent?.emit([y2N, tweenIndexN, yN]);
                         // 更新缓动下标
