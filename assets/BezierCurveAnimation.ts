@@ -61,7 +61,11 @@ export class BezierCurveAnimation extends Component {
     tweenSwitchEvent = new cc.EventHandler();
 
     /** 更新事件 */
-    @property({ displayName: '更新事件', tooltip: '(曲线Y_yN)', type: cc.EventHandler })
+    @property({
+        displayName: '更新事件',
+        tooltip: '(总曲线Y_yN, 当前缓动下标_indexN, 当前缓动曲线Y_yN)',
+        type: cc.EventHandler
+    })
     updateEvent = new cc.EventHandler();
 
     /** 结束事件 */
@@ -69,25 +73,36 @@ export class BezierCurveAnimation extends Component {
     endEvent = new cc.EventHandler();
     /* --------------- private --------------- */
     /* ------------------------------- segmentation ------------------------------- */
-    /** 开始缓动 */
-    startTween(): cc.Tween<any> {
+    /**
+     * 开始缓动
+     * @param startIndexN_ 缓动开始下标
+     * @param endIndexN_ 缓动结束下标
+     * @returns
+     */
+    startTween(startIndexN_?: number, endIndexN_ = (startIndexN_ ?? 0) + 1): cc.Tween<any> {
+        let tweenUnitAs = this.tweenUnitAs;
+        if (startIndexN_ !== undefined) {
+            tweenUnitAs = tweenUnitAs.slice(startIndexN_, endIndexN_);
+        }
         /** 总时间（秒） */
-        let totalTimeSN = this.tweenUnitAs.reduce((preValue, currValue) => preValue + currValue.timeSN, 0);
+        let totalTimeSN = tweenUnitAs.reduce((preValue, currValue) => preValue + currValue.timeSN, 0);
         /** 时间占比 */
         let timeRatioNs: number[] = [];
         {
             let currN = 0;
-            this.tweenUnitAs.forEach((v, kN) => {
+            tweenUnitAs.forEach((v, kN) => {
                 let ratioN = v.timeSN / totalTimeSN;
                 currN += ratioN;
                 timeRatioNs.push(currN);
             });
         }
         /** 曲线函数 */
-        let curveFS = this.tweenUnitAs.map((v) => {
+        let curveFS = tweenUnitAs.map((v) => {
             if (v.customCurveB) {
                 let curve = new BezierCurve(v.controlPointV3S);
-                return curve.point.bind(curve) as (kN: number) => number;
+                return (kN: number) => {
+                    return curve.point(kN).y;
+                };
             } else {
                 return cc.easing[easingEnum[v.easing]].bind(cc.easing) as (kN: number) => number;
             }
@@ -118,13 +133,17 @@ export class BezierCurveAnimation extends Component {
                         /** 曲线位置 */
                         let posN = (ratioN - lastTimeRatioN) / timeRangeN;
                         /** 曲线位置 */
-                        let yN = curveFS[tweenIndexN](posN) * timeRangeN + lastTimeRatioN;
+                        let yN = curveFS[tweenIndexN](posN);
+                        let y2N = yN * timeRangeN + lastTimeRatioN;
                         // 缓动切换事件触发
                         if (lastTweenIndexN !== tweenIndexN) {
                             this.tweenSwitchEvent?.emit([lastTweenIndexN]);
                         }
+                        if (y2N === undefined) {
+                            debugger;
+                        }
                         // 更新事件触发
-                        this.updateEvent?.emit([yN]);
+                        this.updateEvent?.emit([y2N, tweenIndexN, yN]);
                         // 更新缓动下标
                         lastTweenIndexN = tweenIndexN;
                     }
