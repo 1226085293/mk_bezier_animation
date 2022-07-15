@@ -1,6 +1,5 @@
-import { _decorator, Component, Node } from 'cc';
+import { _decorator, Component } from 'cc';
 import * as cc from 'cc';
-import { EDITOR } from 'cc/env';
 import BezierCurve from './BezierCurve';
 const { ccclass, property } = _decorator;
 
@@ -9,9 +8,11 @@ let easingEnum = {};
 {
     let tempN = 0;
     for (let kS in cc.easing) {
-        easingEnum[kS] = tempN;
-        easingEnum[tempN] = kS;
-        tempN++;
+        if (Object.prototype.hasOwnProperty.call(cc.easing, kS)) {
+            easingEnum[kS] = tempN;
+            easingEnum[tempN] = kS;
+            tempN++;
+        }
     }
 }
 
@@ -54,25 +55,36 @@ export class BezierCurveAnimation extends Component {
     /* --------------- 属性 --------------- */
     /** 缓动单元 */
     @property({ displayName: '缓动单元', type: [BezierCurveAnimationTweenUnit] })
-    tweenUnitAs: BezierCurveAnimationTweenUnit[] = [];
+    tweenUnitAS: BezierCurveAnimationTweenUnit[] = [];
 
     /** 缓动切换事件 */
-    @property({ displayName: '缓动切换事件', tooltip: '(当前缓动下标_indexN)', type: cc.EventHandler })
-    tweenSwitchEvent = new cc.EventHandler();
+    @property({ displayName: '缓动切换事件', tooltip: '(当前缓动下标_indexN)', type: [cc.EventHandler] })
+    tweenSwitchEventAS: cc.EventHandler[] = [];
 
     /** 更新事件 */
     @property({
         displayName: '更新事件',
         tooltip: '(总曲线Y_yN, 当前缓动下标_indexN, 当前缓动曲线Y_yN)',
-        type: cc.EventHandler
+        type: [cc.EventHandler]
     })
-    updateEvent = new cc.EventHandler();
+    updateEventAS: cc.EventHandler[] = [];
 
     /** 结束事件 */
-    @property({ displayName: '结束事件', type: cc.EventHandler })
-    endEvent = new cc.EventHandler();
+    @property({ displayName: '结束事件', type: [cc.EventHandler] })
+    endEventAS: cc.EventHandler[] = [];
     /* --------------- private --------------- */
-    /* ------------------------------- segmentation ------------------------------- */
+    /* ------------------------------- 功能 ------------------------------- */
+    /** 触发事件 */
+    emit(eventKey_: keyof BezierCurveAnimation, ...argsAS_: any[]): void {
+        let eventAS = this[eventKey_] as cc.EventHandler[];
+        if (!eventAS) {
+            return;
+        }
+        eventAS.forEach((v) => {
+            v.emit(argsAS_);
+        });
+    }
+
     /**
      * 开始缓动
      * @param startIndexN_ 缓动开始下标
@@ -80,7 +92,7 @@ export class BezierCurveAnimation extends Component {
      * @returns
      */
     startTween(startIndexN_?: number, endIndexN_ = (startIndexN_ ?? 0) + 1): cc.Tween<any> {
-        let tweenUnitAs = this.tweenUnitAs;
+        let tweenUnitAs = this.tweenUnitAS;
         if (startIndexN_ !== undefined) {
             tweenUnitAs = tweenUnitAs.slice(startIndexN_, endIndexN_);
         }
@@ -137,10 +149,10 @@ export class BezierCurveAnimation extends Component {
                         let y2N = yN * timeRangeN + lastTimeRatioN;
                         // 缓动切换事件触发
                         if (lastTweenIndexN !== tweenIndexN) {
-                            this.tweenSwitchEvent?.emit([lastTweenIndexN]);
+                            this.emit('tweenSwitchEventAS', lastTweenIndexN);
                         }
                         // 更新事件触发
-                        this.updateEvent?.emit([y2N, tweenIndexN, yN]);
+                        this.emit('updateEventAS', y2N, tweenIndexN, yN);
                         // 更新缓动下标
                         lastTweenIndexN = tweenIndexN;
                     }
@@ -148,7 +160,7 @@ export class BezierCurveAnimation extends Component {
             )
             .call(() => {
                 // 结束事件触发
-                this.endEvent?.emit([]);
+                this.emit('endEventAS');
             })
             .start();
         return tween;

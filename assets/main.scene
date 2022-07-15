@@ -141,6 +141,9 @@
     "_active": true,
     "_components": [
       {
+        "__id__": 54
+      },
+      {
         "__id__": 55
       },
       {
@@ -419,7 +422,7 @@
     "_active": true,
     "_components": [
       {
-        "__id__": 54
+        "__id__": 53
       }
     ],
     "_prefab": null,
@@ -622,7 +625,7 @@
         "__id__": 47
       },
       {
-        "__id__": 52
+        "__id__": 49
       }
     ],
     "_prefab": null,
@@ -1714,81 +1717,22 @@
     },
     "_enabled": true,
     "__prefab": null,
-    "tweenUnitAs": [
+    "tweenUnitAS": [
       {
         "__id__": 48
       }
     ],
-    "tweenSwitchEvent": {
-      "__id__": 49
-    },
-    "updateEvent": {
-      "__id__": 50
-    },
-    "endEvent": {
-      "__id__": 51
-    },
+    "tweenSwitchEventAS": [],
+    "updateEventAS": [],
+    "endEventAS": [],
     "_id": "81NhY/uUlE+bEhuJuC4gc1"
   },
   {
     "__type__": "BezierCurveAnimationTweenUnit",
     "customCurveB": false,
     "easing": 6,
-    "controlPointV3S": [
-      {
-        "__type__": "cc.Vec3",
-        "x": 0,
-        "y": 0,
-        "z": 0
-      },
-      {
-        "__type__": "cc.Vec3",
-        "x": 0.086,
-        "y": 0.78,
-        "z": 0
-      },
-      {
-        "__type__": "cc.Vec3",
-        "x": 0.44,
-        "y": 0.916,
-        "z": 0
-      },
-      {
-        "__type__": "cc.Vec3",
-        "x": 1,
-        "y": 1.003,
-        "z": 0
-      }
-    ],
-    "timeSN": 5
-  },
-  {
-    "__type__": "cc.ClickEvent",
-    "target": null,
-    "component": "",
-    "_componentId": "b1f62Y9bmdIM5sNvTecZgMd",
-    "handler": "tweenSwitchEvent",
-    "customEventData": ""
-  },
-  {
-    "__type__": "cc.ClickEvent",
-    "target": {
-      "__id__": 16
-    },
-    "component": "RollingLottery",
-    "_componentId": "",
-    "handler": "updateEvent",
-    "customEventData": ""
-  },
-  {
-    "__type__": "cc.ClickEvent",
-    "target": {
-      "__id__": 16
-    },
-    "component": "RollingLottery",
-    "_componentId": "",
-    "handler": "endEvent",
-    "customEventData": ""
+    "controlPointV3S": [],
+    "timeSN": 1
   },
   {
     "__type__": "b1f62Y9bmdIM5sNvTecZgMd",
@@ -1801,18 +1745,40 @@
     "__prefab": null,
     "dire": 0,
     "itemUpdateEvent": {
-      "__id__": 53
+      "__id__": 50
+    },
+    "centerNodeEvent": {
+      "__id__": 51
+    },
+    "scrollEndEvent": {
+      "__id__": 52
     },
     "_id": "6d+rTEEL9OZoMInU6l+PWp"
   },
   {
     "__type__": "cc.ClickEvent",
     "target": {
-      "__id__": 16
+      "__id__": 4
     },
     "component": "",
-    "_componentId": "b1f62Y9bmdIM5sNvTecZgMd",
-    "handler": "childUpdate",
+    "_componentId": "c6550RvRXBJCp7yhDZhJZ5N",
+    "handler": "eventItemUpdate",
+    "customEventData": ""
+  },
+  {
+    "__type__": "cc.ClickEvent",
+    "target": null,
+    "component": "",
+    "_componentId": "",
+    "handler": "",
+    "customEventData": ""
+  },
+  {
+    "__type__": "cc.ClickEvent",
+    "target": null,
+    "component": "",
+    "_componentId": "",
+    "handler": "",
     "customEventData": ""
   },
   {
@@ -1900,6 +1866,17 @@
     "_alignMode": 2,
     "_lockFlags": 0,
     "_id": "86y8GUj85EoaxJ3AmNeIZk"
+  },
+  {
+    "__type__": "c6550RvRXBJCp7yhDZhJZ5N",
+    "_name": "",
+    "_objFlags": 0,
+    "node": {
+      "__id__": 4
+    },
+    "_enabled": true,
+    "__prefab": null,
+    "_id": "30wjiGi11PK6zFwTt8v3LO"
   },
   {
     "__type__": "cc.Node",
