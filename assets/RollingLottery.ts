@@ -180,9 +180,6 @@ export class RollingLottery2 extends Component {
                 cc.Rect.intersection(this._temp3Rect, this._temp.currNodeRect, this._parentCenterRect).height >=
                     this._parentCenterRect.height * 0.5
             ) {
-                if (this._temp.currIndexN === -51) {
-                    debugger;
-                }
                 this.currIndexN = this._temp.currIndexN;
             }
         });
@@ -242,9 +239,6 @@ export class RollingLottery2 extends Component {
                 cc.Rect.intersection(this._temp3Rect, this._temp.currNodeRect, this._parentCenterRect).height >=
                     this._parentCenterRect.height * 0.5
             ) {
-                if (this._temp.currIndexN === -51) {
-                    debugger;
-                }
                 this.currIndexN = this._temp.currIndexN;
             }
         });
@@ -433,9 +427,6 @@ export class RollingLottery2 extends Component {
         // 开始滚动
         this._scrollChild(this._totalDistV3);
         // 更新状态
-        if (indexN_ === -51) {
-            debugger;
-        }
         this.currIndexN = indexN_;
         this._scrollB = false;
         this._jumpB = false;
