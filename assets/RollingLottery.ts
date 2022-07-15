@@ -173,7 +173,8 @@ export class RollingLottery2 extends Component {
                             //     v.setSiblingIndex(0);
                             // }, 0);
 
-                            let tempN = this._selfRect.height + this._ItemSize.height * 2;
+                            /** 展示周长 */
+                            let tempN = this._selfRect.height + this._ItemSize.height;
                             // 超出圈数
                             let beyondTurnsN = Math.floor((this._selfRect.yMin - currNodeRect.yMax) / tempN);
 
