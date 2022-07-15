@@ -1,13 +1,13 @@
 import { _decorator, Component, Node } from 'cc';
 import * as cc from 'cc';
-import { RollingLottery2 } from './RollingLottery';
+import { RollingLottery } from './RollingLottery';
 const { ccclass, property } = _decorator;
 
 @ccclass('main')
 export class main extends Component {
     /* ------------------------------- segmentation ------------------------------- */
     start() {
-        let comp = this.node.getComponentInChildren(RollingLottery2);
+        let comp = this.node.getComponentInChildren(RollingLottery);
         // let indexN = 0;
         // this.node.on(
         //     cc.Node.EventType.TOUCH_END,
@@ -17,11 +17,18 @@ export class main extends Component {
         //     this
         // );
 
-        // comp.loop(10000);
-        comp.scroll(50, {
-            tweenIndexN: 0,
-            nextPlayB: true
-        });
+        comp.reset();
+        comp.loop(-1500);
+        // setTimeout(() => {
+        //     comp.scroll(-10, {
+        //         tweenIndexN: 3,
+        //         endCBF: () => {
+        //             // comp.scroll(25, {
+        //             //     tweenIndexN: 3
+        //             // });
+        //         }
+        //     });
+        // }, 3000);
     }
     /* ------------------------------- segmentation ------------------------------- */
     eventItemUpdate(node_: cc.Node, indexN_: number): void {

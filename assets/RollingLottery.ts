@@ -4,7 +4,7 @@ import { BezierCurveAnimation } from './BezierCurveAnimation';
 const { ccclass, property, requireComponent, executeInEditMode } = _decorator;
 
 /** 旋转抽奖方向 */
-export enum RollingLottery2Direction {
+export enum RollingLotteryDirection {
     /** 竖 */
     VERTICAL,
     /** 横 */
@@ -12,14 +12,14 @@ export enum RollingLottery2Direction {
 }
 
 /** 循环滚动抽奖 */
-@ccclass('RollingLottery2')
+@ccclass('RollingLottery')
 @requireComponent(BezierCurveAnimation)
 @requireComponent(cc.Layout)
-export class RollingLottery2 extends Component {
+export class RollingLottery extends Component {
     /* --------------- 属性 --------------- */
     /** 滚动方向 */
-    @property({ displayName: '滚动方向', type: cc.Enum(RollingLottery2Direction) })
-    dire = RollingLottery2Direction.VERTICAL;
+    @property({ displayName: '滚动方向', type: cc.Enum(RollingLotteryDirection) })
+    dire = RollingLotteryDirection.VERTICAL;
 
     /** 子节点刷新事件 */
     @property({ displayName: '子节点刷新事件', tooltip: '(子节点_node, 下标_indexN)', type: cc.EventHandler })
@@ -54,7 +54,7 @@ export class RollingLottery2 extends Component {
     /** 当前缓动下标 */
     private _currTweenIndexN = 0;
     /** 当前滚动配置 */
-    private _scrollConfig: RollingLottery2ScrollConfig;
+    private _scrollConfig: RollingLotteryScrollConfig;
     /** 父节点中心点矩形 */
     private _parentCenterRect: cc.Rect;
     /** 跳过状态 */
@@ -250,7 +250,7 @@ export class RollingLottery2 extends Component {
      */
     private _scrollChild(distV3_: cc.Vec3): void {
         // 左右滚动
-        if (this.dire === RollingLottery2Direction.HORIZONTAL) {
+        if (this.dire === RollingLotteryDirection.HORIZONTAL) {
             cc.error('未实现');
             // ...
         }
@@ -274,11 +274,11 @@ export class RollingLottery2 extends Component {
         /** 间隔格子 */
         let intervalN = indexN_ - this._currIndexN;
         /** 格子距离 */
-        let boxDistN = this.dire === RollingLottery2Direction.HORIZONTAL ? this._ItemSize.width : this._ItemSize.height;
+        let boxDistN = this.dire === RollingLotteryDirection.HORIZONTAL ? this._ItemSize.width : this._ItemSize.height;
         /** 当前格子距父节点(0, 0)的偏移坐标 */
         let offsetDistV3 = this.node.worldPosition.clone().subtract(currNode.worldPosition);
         // 设置总距离
-        if (this.dire === RollingLottery2Direction.HORIZONTAL) {
+        if (this.dire === RollingLotteryDirection.HORIZONTAL) {
             this._totalDistV3 = cc.v3(intervalN * boxDistN + offsetDistV3.x);
         } else {
             this._totalDistV3 = cc.v3(0, intervalN * boxDistN + offsetDistV3.y);
@@ -303,11 +303,12 @@ export class RollingLottery2 extends Component {
         endEvent.target = this.node;
         this.curveComp.endEventAS.push(endEvent);
 
-        this._updateData();
+        this._resetData();
     }
 
-    /** 更新数据 */
-    private _updateData(): void {
+    /** 重制数据 */
+    private _resetData(): void {
+        this._currIndexN = 0;
         this._ItemSize = this.node.children[0].getComponent(cc.UITransform).contentSize.clone();
 
         // item 大小矩形，中心点在节点 (0, 0) 位置
@@ -349,6 +350,13 @@ export class RollingLottery2 extends Component {
         }
     }
 
+    /** 重制视图 */
+    private _resetView(): void {
+        if (this.node.children.length) {
+            this.jump(this._currIndexN);
+        }
+    }
+
     /** 初始化事件 */
     private _initEvent(): void {
         this.node.on(cc.Node.EventType.CHILD_ADDED, this._nodeChildAdded, this);
@@ -357,8 +365,8 @@ export class RollingLottery2 extends Component {
 
     /** 重置 */
     reset(): void {
-        this._updateData();
-        this._initView();
+        this._resetData();
+        this._resetView();
     }
 
     /**
@@ -386,7 +394,7 @@ export class RollingLottery2 extends Component {
                             if (!this.isValid) {
                                 return;
                             }
-                            if (this.dire === RollingLottery2Direction.HORIZONTAL) {
+                            if (this.dire === RollingLotteryDirection.HORIZONTAL) {
                                 distV3.x = (target.valueN - target.lastValueN) * speedN_;
                             } else {
                                 distV3.y = (target.valueN - target.lastValueN) * speedN_;
@@ -433,12 +441,12 @@ export class RollingLottery2 extends Component {
     }
 
     /** 滚动到指定下标 */
-    scroll(indexN_: number, scrollConfig_?: RollingLottery2ScrollConfig): void {
+    scroll(indexN_: number, scrollConfig_?: RollingLotteryScrollConfig): void {
         if (this._scrollB && !this._loopScrollB) {
             return;
         }
         this._scrollB = true;
-        this._scrollConfig = new RollingLottery2ScrollConfig(scrollConfig_);
+        this._scrollConfig = new RollingLotteryScrollConfig(scrollConfig_);
 
         // 停止循环滚动
         if (this._loopScrollB) {
@@ -456,7 +464,7 @@ export class RollingLottery2 extends Component {
     }
     /* ------------------------------- 自定义事件 ------------------------------- */
     private _eventUpdate(yN_: number, indexN_: number, y2N_: number): void {
-        if (this.dire === RollingLottery2Direction.HORIZONTAL) {
+        if (this.dire === RollingLotteryDirection.HORIZONTAL) {
             cc.error('未实现');
             // ...
         } else {
@@ -487,8 +495,8 @@ export class RollingLottery2 extends Component {
 }
 
 /** 滚动配置 */
-class RollingLottery2ScrollConfig {
-    constructor(init_?: RollingLottery2ScrollConfig) {
+class RollingLotteryScrollConfig {
+    constructor(init_?: RollingLotteryScrollConfig) {
         Object.assign(this, init_);
     }
     /** 指定缓动单元下标 */
