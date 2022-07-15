@@ -8,17 +8,19 @@ export class main extends Component {
     /* ------------------------------- segmentation ------------------------------- */
     start() {
         let comp = this.node.getComponentInChildren(RollingLottery);
+        // comp.loop(1500);
         // let indexN = 0;
         // this.node.on(
         //     cc.Node.EventType.TOUCH_END,
         //     () => {
-        //         comp['_scrollChild'](cc.v3(0, -50));
+        //         comp.scroll(0, {});
         //     },
         //     this
         // );
+        comp.scroll(10, {});
 
-        comp.reset();
-        comp.loop(-1500);
+        // comp.reset();
+        // comp.loop(-1500);
         // setTimeout(() => {
         //     comp.scroll(-10, {
         //         tweenIndexN: 3,
@@ -35,11 +37,11 @@ export class main extends Component {
         node_.getComponentInChildren(cc.Label).string = indexN_ + '';
     }
 
-    centerNodeEvent(indexN_: number): void {
+    eventCenterNode(indexN_: number): void {
         cc.log('当前下标', indexN_);
     }
 
-    scrollEndEvent(): void {
+    eventScrollEnd(): void {
         cc.log('滚动结束');
     }
 }

@@ -51,8 +51,6 @@ export class RollingLottery extends Component {
     private _selfRect = cc.rect();
     /** 上次曲线 Y */
     private _lastCurveYN = 0;
-    /** 当前缓动下标 */
-    private _currTweenIndexN = 0;
     /** 当前滚动配置 */
     private _scrollConfig: RollingLotteryScrollConfig;
     /** 父节点中心点矩形 */
@@ -459,11 +457,11 @@ export class RollingLottery extends Component {
         // 更新移动距离
         this._updateMoveDist(indexN_);
         // 开始滚动
-        this._currTweenIndexN = this._scrollConfig.tweenIndexN;
-        this.curveComp.startTween(this._currTweenIndexN);
+        this.curveComp.startTween(this._scrollConfig.tweenIndexNS);
     }
     /* ------------------------------- 自定义事件 ------------------------------- */
-    private _eventUpdate(yN_: number, indexN_: number, y2N_: number): void {
+    private _eventUpdate(yN_: number, indexN_: number): void {
+        cc.log(yN_, yN_);
         if (this.dire === RollingLotteryDirection.HORIZONTAL) {
             cc.error('未实现');
             // ...
@@ -476,14 +474,8 @@ export class RollingLottery extends Component {
 
     private _eventEnd(): void {
         this._scrollB = false;
-
-        // 继续缓动
-        if (this._scrollConfig.nextPlayB && ++this._currTweenIndexN < this.curveComp.tweenUnitAS.length) {
-            this.curveComp.startTween(this._currTweenIndexN);
-        } else {
-            this.scrollEndEvent.emit([]);
-            this._scrollConfig.endCBF?.();
-        }
+        this.scrollEndEvent.emit([]);
+        this._scrollConfig.endCBF?.();
     }
     /* ------------------------------- 节点事件 ------------------------------- */
     private _nodeChildAdded(): void {
@@ -499,10 +491,8 @@ class RollingLotteryScrollConfig {
     constructor(init_?: RollingLotteryScrollConfig) {
         Object.assign(this, init_);
     }
-    /** 指定缓动单元下标 */
-    tweenIndexN? = 0;
-    /** 继续下个缓动单元播放 */
-    nextPlayB? = false;
+    /** 缓动队列 */
+    tweenIndexNS?: number[];
     /** 结束回调 */
     endCBF?: () => void;
 }

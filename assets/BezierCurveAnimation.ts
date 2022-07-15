@@ -65,7 +65,7 @@ export class BezierCurveAnimation extends Component {
     /** 更新事件 */
     @property({
         displayName: '更新事件',
-        tooltip: '(总曲线Y_yN, 当前缓动下标_indexN, 当前缓动曲线Y_yN)',
+        tooltip: '(当前缓动曲线Y_yN, 当前缓动下标_indexN)',
         type: [cc.EventHandler]
     })
     updateEventAS: cc.EventHandler[] = [];
@@ -92,11 +92,28 @@ export class BezierCurveAnimation extends Component {
      * @param endIndexN_ 缓动结束下标
      * @returns
      */
-    startTween(startIndexN_?: number, endIndexN_ = (startIndexN_ ?? 0) + 1): cc.Tween<any> {
+    startTween(startIndexN_?: number): cc.Tween<any>;
+    startTween(tweenNS_?: number[]): cc.Tween<any>;
+    startTween(args_?: number | number[]): cc.Tween<any> {
+        /** 缓动队列 */
         let tweenUnitAs = this.tweenUnitAS;
-        if (startIndexN_ !== undefined) {
-            tweenUnitAs = tweenUnitAs.slice(startIndexN_, endIndexN_);
+
+        // 获取缓动队列
+        if (args_ !== undefined) {
+            if (typeof args_ === 'number') {
+                tweenUnitAs = tweenUnitAs.slice(args_, 1);
+            } else {
+                tweenUnitAs = [];
+                args_.forEach((vN) => {
+                    tweenUnitAs.push(this.tweenUnitAS[vN]);
+                });
+            }
+            tweenUnitAs = tweenUnitAs.filter((v) => Boolean(v));
         }
+        if (!tweenUnitAs.length) {
+            return;
+        }
+
         /** 总时间（秒） */
         let totalTimeSN = tweenUnitAs.reduce((preValue, currValue) => preValue + currValue.timeSN, 0);
         /** 时间占比 */
@@ -147,13 +164,12 @@ export class BezierCurveAnimation extends Component {
                         let posN = (ratioN - lastTimeRatioN) / timeRangeN;
                         /** 曲线位置 */
                         let yN = curveFS[tweenIndexN](posN);
-                        let y2N = yN * timeRangeN + lastTimeRatioN;
                         // 缓动切换事件触发
                         if (lastTweenIndexN !== tweenIndexN) {
                             this.emit('tweenSwitchEventAS', lastTweenIndexN);
                         }
                         // 更新事件触发
-                        this.emit('updateEventAS', y2N, tweenIndexN, yN);
+                        this.emit('updateEventAS', yN, tweenIndexN);
                         // 更新缓动下标
                         lastTweenIndexN = tweenIndexN;
                     }
