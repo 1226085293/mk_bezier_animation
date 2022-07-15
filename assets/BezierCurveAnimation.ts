@@ -1,7 +1,7 @@
 import { _decorator, Component } from 'cc';
 import * as cc from 'cc';
 import BezierCurve from './BezierCurve';
-const { ccclass, property } = _decorator;
+const { ccclass, property, help } = _decorator;
 
 /** 缓动枚举 */
 let easingEnum = {};
@@ -51,6 +51,7 @@ class BezierCurveAnimationTweenUnit {
 
 /** 贝塞尔曲线通用动画组件 */
 @ccclass('BezierCurveAnimation')
+@help('https://www.desmos.com/calculator/cahqdxeshd?lang=zh-CN')
 export class BezierCurveAnimation extends Component {
     /* --------------- 属性 --------------- */
     /** 缓动单元 */
