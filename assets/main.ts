@@ -43,25 +43,25 @@ export class main extends Component {
         };
         scrollF();
 
-        // let rotateF = async () => {
-        //     let targetIndexN = Math.floor(Math.random() * 12);
-        //     cc.log('旋转目标', targetIndexN);
-        //     let task = new Promise<void>((resolveF) => {
-        //         this.rotateTurntable.scroll(targetIndexN, {
-        //             endCBF: resolveF
-        //         });
-        //     });
-        //     let task2 = new Promise<void>((resolveF) => {
-        //         this.rotateArrow.scroll(targetIndexN, {
-        //             endCBF: resolveF
-        //         });
-        //     });
-        //     await Promise.all([task, task2]);
-        //     setTimeout(() => {
-        //         rotateF();
-        //     }, 1000);
-        // };
-        // rotateF();
+        let rotateF = async () => {
+            let targetIndexN = Math.floor(Math.random() * 12);
+            cc.log('旋转目标', targetIndexN);
+            let task = new Promise<void>((resolveF) => {
+                this.rotateTurntable.scroll(targetIndexN, {
+                    endCBF: resolveF
+                });
+            });
+            let task2 = new Promise<void>((resolveF) => {
+                this.rotateArrow.scroll(targetIndexN, {
+                    endCBF: resolveF
+                });
+            });
+            await Promise.all([task, task2]);
+            setTimeout(() => {
+                rotateF();
+            }, 1000);
+        };
+        rotateF();
     }
     /* ------------------------------- segmentation ------------------------------- */
     eventItemUpdate(node_: cc.Node, indexN_: number): void {
