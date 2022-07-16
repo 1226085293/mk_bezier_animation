@@ -45,7 +45,7 @@ export class main extends Component {
 
         let rotateF = async () => {
             let targetIndexN = Math.floor(Math.random() * 12);
-            cc.log('旋转目标', targetIndexN);
+            // cc.log('旋转目标', targetIndexN);
             let task = new Promise<void>((resolveF) => {
                 this.rotateTurntable.scroll(targetIndexN, {
                     endCBF: resolveF
