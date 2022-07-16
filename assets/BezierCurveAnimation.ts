@@ -65,7 +65,7 @@ export class BezierCurveAnimation extends Component {
     /** 更新事件 */
     @property({
         displayName: '更新事件',
-        tooltip: '(当前缓动曲线Y_yN, 当前缓动下标_indexN)',
+        tooltip: '(当前缓动曲线Y_yN, 当前缓动下标_indexN, 总曲线Y_yN)',
         type: [cc.EventHandler]
     })
     updateEventAS: cc.EventHandler[] = [];
@@ -162,14 +162,16 @@ export class BezierCurveAnimation extends Component {
                         let timeRangeN = timeRatioNs[tweenIndexN] - lastTimeRatioN;
                         /** 曲线位置 */
                         let posN = (ratioN - lastTimeRatioN) / timeRangeN;
-                        /** 曲线位置 */
-                        let yN = curveFS[tweenIndexN](posN);
+                        /** 当前曲线 Y */
+                        let currCurveYN = curveFS[tweenIndexN](posN);
+                        /** 总曲线 Y */
+                        let totalCurveYN = currCurveYN * timeRangeN + lastTimeRatioN;
                         // 缓动切换事件触发
                         if (lastTweenIndexN !== tweenIndexN) {
                             this.emit('tweenSwitchEventAS', lastTweenIndexN);
                         }
                         // 更新事件触发
-                        this.emit('updateEventAS', yN, tweenIndexN);
+                        this.emit('updateEventAS', currCurveYN, tweenIndexN, totalCurveYN);
                         // 更新缓动下标
                         lastTweenIndexN = tweenIndexN;
                     }

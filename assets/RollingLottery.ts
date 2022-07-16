@@ -5,10 +5,8 @@ const { ccclass, property, requireComponent, executeInEditMode } = _decorator;
 
 /** 旋转抽奖方向 */
 export enum RollingLotteryDirection {
-    /** 竖 */
-    VERTICAL,
-    /** 横 */
-    HORIZONTAL
+    竖,
+    横
 }
 
 /** 循环滚动抽奖 */
@@ -19,15 +17,15 @@ export class RollingLottery extends Component {
     /* --------------- 属性 --------------- */
     /** 滚动方向 */
     @property({ displayName: '滚动方向', type: cc.Enum(RollingLotteryDirection) })
-    dire = RollingLotteryDirection.VERTICAL;
+    dire = RollingLotteryDirection.竖;
 
     /** 子节点刷新事件 */
     @property({ displayName: '子节点刷新事件', tooltip: '(子节点_node, 下标_indexN)', type: cc.EventHandler })
     itemUpdateEvent = new cc.EventHandler();
 
-    /** 中心节点变更事件 */
-    @property({ displayName: '中心节点变更事件', tooltip: '(下标_indexN, 跳过状态_jumpB)', type: cc.EventHandler })
-    centerNodeEvent = new cc.EventHandler();
+    /** 当前下标变更事件 */
+    @property({ displayName: '当前下标变更事件', tooltip: '(下标_indexN, 跳过状态_jumpB)', type: cc.EventHandler })
+    indexChangeEvent = new cc.EventHandler();
 
     /** 滚动结束事件 */
     @property({ displayName: '滚动结束事件', type: cc.EventHandler })
@@ -83,17 +81,20 @@ export class RollingLottery extends Component {
     get tailNode() {
         return this.node.children[0];
     }
-    /** 当前中心下标 */
+    /** 当前下标 */
     get currIndexN() {
         return this._currIndexN;
     }
     set currIndexN(valueN_) {
-        this.setCurrIndexN(valueN_);
+        this._setCurrIndexN(valueN_);
     }
     /* ------------------------------- get/set ------------------------------- */
-    setCurrIndexN(valueN_: number) {
+    private _setCurrIndexN(valueN_: number) {
+        if (valueN_ === this._currIndexN) {
+            return;
+        }
         this._currIndexN = valueN_;
-        this.centerNodeEvent.emit([this._currIndexN, this._jumpB]);
+        this.indexChangeEvent.emit([this._currIndexN, this._jumpB]);
         // logger.log('当前选中', this._currIndexN);
     }
     /* ------------------------------- 生命周期 ------------------------------- */
@@ -103,7 +104,96 @@ export class RollingLottery extends Component {
         this._initEvent();
     }
     /* ------------------------------- 功能 ------------------------------- */
-    /** 获取在世界坐标系下的节点包围盒(不包含自身激活的子节点范围) */
+    /** 初始化数据 */
+    private _initData(): void {
+        this.curveComp = this.node.getComponent(BezierCurveAnimation);
+
+        // 设置更新事件
+        let updateEvent = new cc.EventHandler();
+        updateEvent.component = cc.js.getClassName(this);
+        updateEvent.handler = '_eventUpdate';
+        updateEvent.target = this.node;
+        this.curveComp.updateEventAS.push(updateEvent);
+
+        // 设置结束事件
+        let endEvent = new cc.EventHandler();
+        endEvent.component = cc.js.getClassName(this);
+        endEvent.handler = '_eventEnd';
+        endEvent.target = this.node;
+        this.curveComp.endEventAS.push(endEvent);
+
+        this._resetData();
+    }
+
+    /** 初始化视图 */
+    private _initView(): void {
+        this.node.getComponent(cc.Layout).enabled = false;
+
+        // 初始化子节点及选中
+        if (this.node.children.length) {
+            // 重置子节点
+            this.node.children.forEach((v, kN) => {
+                v.name = String(kN + this._currIndexN);
+                this.itemUpdateEvent.emit([v, kN + this._currIndexN]);
+            });
+
+            this.jump(this._currIndexN);
+        }
+    }
+
+    /** 初始化事件 */
+    private _initEvent(): void {
+        this.node.on(cc.Node.EventType.CHILD_ADDED, this._nodeChildAdded, this);
+        this.node.on(cc.Node.EventType.CHILD_REMOVED, this._nodeChildRemoved, this);
+    }
+
+    /** 重制数据 */
+    private _resetData(): void {
+        this._currIndexN = 0;
+        this._ItemSize = this.node.children[0].getComponent(cc.UITransform).contentSize.clone();
+
+        // item 大小矩形，中心点在节点 (0, 0) 位置
+        this._parentCenterRect = cc.rect(
+            this.node.worldPosition.x - this._ItemSize.width * 0.5,
+            this.node.worldPosition.y - this._ItemSize.height * 0.5,
+            this._ItemSize.width,
+            this._ItemSize.height
+        );
+
+        // 重置数据
+        this._uiTransformTab = Object.create(null);
+        this._uiTransformTab[this.node.uuid] = this.node.getComponent(cc.UITransform);
+        this._selfRect = this._getBoundingBoxToWorld(this.node);
+        this._perimeterV3.set(cc.Vec3.ZERO);
+
+        // 更新 _uiTransformTab, _perimeterV3
+        let itemSize: cc.Size;
+        this.node.children.forEach((v1) => {
+            this._uiTransformTab[v1.uuid] = v1.getComponent(cc.UITransform);
+            itemSize = this._uiTransformTab[v1.uuid].contentSize;
+            this._perimeterV3.add3f(itemSize.x, itemSize.y, 0);
+        });
+    }
+
+    /** 重制视图 */
+    private _resetView(): void {
+        if (this.node.children.length) {
+            this.jump(this._currIndexN);
+        }
+    }
+
+    /** 重置 */
+    private _reset(): void {
+        this._resetData();
+        this._resetView();
+    }
+
+    /**
+     * 获取在世界坐标系下的节点包围盒(不包含自身激活的子节点范围)
+     * @param node_ 目标节点
+     * @param outRect_ 输出矩形
+     * @returns 输出矩形
+     */
     private _getBoundingBoxToWorld(node_: cc.Node, outRect_ = cc.rect()): cc.Rect {
         let uiTransform = this._uiTransformTab[node_.uuid];
         cc.Mat4.fromRTS(this._tempM4, node_.getRotation(), node_.getPosition(), node_.getScale());
@@ -117,13 +207,20 @@ export class RollingLottery extends Component {
         return outRect_;
     }
 
-    /** 更新节点下标 */
+    /**
+     * 更新节点下标
+     * @param node_ 目标节点
+     * @param indexN_ 下标
+     */
     private _updateNodeIndex(node_: cc.Node, indexN_: number): void {
         node_.name = String(indexN_);
         this.itemUpdateEvent.emit([node_, indexN_]);
     }
 
-    /** 上到下移动子节点 */
+    /**
+     * 上到下移动子节点
+     * @param distN_ 距离
+     */
     private _moveNodeTopToBottom(distN_: number): void {
         this.node.children.forEach((v, kN) => {
             this._temp.currTransform = this._uiTransformTab[v.uuid];
@@ -183,7 +280,10 @@ export class RollingLottery extends Component {
         });
     }
 
-    /** 下到上移动子节点 */
+    /**
+     * 下到上移动子节点
+     * @param distN_ 距离
+     */
     private _moveNodeBottomToTop(distN_: number): void {
         this.node.children.forEach((v, kN) => {
             this._temp.currTransform = this._uiTransformTab[v.uuid];
@@ -243,128 +343,192 @@ export class RollingLottery extends Component {
     }
 
     /**
+     * 左到右移动子节
+     * @param distN_ 距离
+     */
+    private _moveNodeLeftToRight(distN_: number): void {
+        this.node.children.forEach((v, kN) => {
+            this._temp.currTransform = this._uiTransformTab[v.uuid];
+            this._temp.updatePosB = false;
+            this._getBoundingBoxToWorld(v, this._temp.currNodeRect);
+
+            // 移动坐标
+            this._temp.currNodeRect.x += distN_;
+
+            // 相交则更新节点坐标
+            if (this._temp.currNodeRect.intersects(this._selfRect)) {
+                this._temp.updatePosB = true;
+            }
+            // 若不相交则超出范围
+            else {
+                // 若节点在左方则跳过更新
+                if (this._temp.currNodeRect.xMax < this._selfRect.xMin) {
+                    this._temp.updatePosB = true;
+                } else {
+                    // (超出范围 / 周长) + 超出视图区域的 1
+                    this._temp.outOfRangeMultipleN =
+                        Math.floor((this._temp.currNodeRect.xMin - this._selfRect.xMax) / this._perimeterV3.x) + 1;
+
+                    // 更新坐标
+                    this._temp.currNodeRect.x -= this._temp.outOfRangeMultipleN * this._perimeterV3.x;
+                    v.worldPosition = cc.v3(
+                        this._temp.currNodeRect.x + this._ItemSize.width * this._temp.currTransform.anchorX,
+                        v.worldPosition.y
+                    );
+
+                    // 更新 item 下标
+                    this._updateNodeIndex(
+                        v,
+                        Number(v.name) - this._temp.outOfRangeMultipleN * this.node.children.length
+                    );
+                }
+            }
+
+            // 更新节点坐标
+            if (this._temp.updatePosB) {
+                v.worldPosition = cc.v3(
+                    this._temp.currNodeRect.x + this._temp.currNodeRect.width * this._temp.currTransform.anchorX,
+                    v.worldPosition.y
+                );
+            }
+
+            // 更新当前下标
+            this._temp.currIndexN = Number(v.name);
+
+            if (
+                this._temp.currIndexN < this._currIndexN &&
+                cc.Rect.intersection(this._temp3Rect, this._temp.currNodeRect, this._parentCenterRect).width >=
+                    this._parentCenterRect.width * 0.5
+            ) {
+                this.currIndexN = this._temp.currIndexN;
+            }
+        });
+    }
+
+    /**
+     * 右到左移动子节
+     * @param distN_ 距离
+     */
+    private _moveNodeRightToLeft(distN_: number): void {
+        this.node.children.forEach((v, kN) => {
+            this._temp.currTransform = this._uiTransformTab[v.uuid];
+            this._temp.updatePosB = false;
+            this._getBoundingBoxToWorld(v, this._temp.currNodeRect);
+
+            // 移动坐标
+            this._temp.currNodeRect.x += distN_;
+
+            // 相交则更新节点坐标
+            if (this._temp.currNodeRect.intersects(this._selfRect)) {
+                this._temp.updatePosB = true;
+            }
+            // 若不相交则超出范围
+            else {
+                // 若节点在右方则跳过更新
+                if (this._temp.currNodeRect.xMin > this._selfRect.xMax) {
+                    this._temp.updatePosB = true;
+                } else {
+                    // (超出范围 / 周长) + 超出视图区域的 1
+                    this._temp.outOfRangeMultipleN =
+                        Math.floor((this._selfRect.xMin - this._temp.currNodeRect.xMax) / this._perimeterV3.x) + 1;
+
+                    // 更新坐标
+                    this._temp.currNodeRect.x += this._temp.outOfRangeMultipleN * this._perimeterV3.x;
+                    v.worldPosition = cc.v3(
+                        this._temp.currNodeRect.x + this._ItemSize.width * this._temp.currTransform.anchorX,
+                        v.worldPosition.y
+                    );
+
+                    // 更新 item 下标
+                    this._updateNodeIndex(
+                        v,
+                        Number(v.name) + this._temp.outOfRangeMultipleN * this.node.children.length
+                    );
+                }
+            }
+
+            // 更新节点坐标
+            if (this._temp.updatePosB) {
+                v.worldPosition = cc.v3(
+                    this._temp.currNodeRect.x + this._temp.currNodeRect.width * this._temp.currTransform.anchorX,
+                    v.worldPosition.y
+                );
+            }
+
+            // 更新当前下标
+            this._temp.currIndexN = Number(v.name);
+
+            if (
+                this._temp.currIndexN > this._currIndexN &&
+                cc.Rect.intersection(this._temp3Rect, this._temp.currNodeRect, this._parentCenterRect).width >=
+                    this._parentCenterRect.width * 0.5
+            ) {
+                this.currIndexN = this._temp.currIndexN;
+            }
+        });
+    }
+
+    /**
      * 滚动子节点
      * @param distV3_ 距离
      */
     private _scrollChild(distV3_: cc.Vec3): void {
         // 左右滚动
-        if (this.dire === RollingLotteryDirection.HORIZONTAL) {
-            cc.error('未实现');
-            // ...
+        if (this.dire === RollingLotteryDirection.横) {
+            if (!distV3_.x) {
+                return;
+            }
+            // 从左往右
+            if (distV3_.x > 0) {
+                this._moveNodeLeftToRight(distV3_.x);
+            }
+            // 从右往左
+            else if (distV3_.x < 0) {
+                this._moveNodeRightToLeft(distV3_.x);
+            }
         }
         // 上下滚动
         else {
-            // 从上往下滚动
+            if (!distV3_.y) {
+                return;
+            }
+            // 从上往下
             if (distV3_.y < 0) {
                 this._moveNodeTopToBottom(distV3_.y);
             }
-            // 从下往上滚动
+            // 从下往上
             else if (distV3_.y > 0) {
                 this._moveNodeBottomToTop(distV3_.y);
             }
         }
     }
 
-    /** 更新运动距离 */
+    /**
+     * 更新运动距离
+     * @param indexN_ 目标下标
+     */
     private _updateMoveDist(indexN_: number): void {
         /** 当前节点 */
         let currNode = this.node.getChildByName(String(this._currIndexN));
         /** 间隔格子 */
         let intervalN = indexN_ - this._currIndexN;
         /** 格子距离 */
-        let boxDistN = this.dire === RollingLotteryDirection.HORIZONTAL ? this._ItemSize.width : this._ItemSize.height;
+        let boxDistN = this.dire === RollingLotteryDirection.横 ? this._ItemSize.width : this._ItemSize.height;
         /** 当前格子距父节点(0, 0)的偏移坐标 */
         let offsetDistV3 = this.node.worldPosition.clone().subtract(currNode.worldPosition);
         // 设置总距离
-        if (this.dire === RollingLotteryDirection.HORIZONTAL) {
-            this._totalDistV3 = cc.v3(intervalN * boxDistN + offsetDistV3.x);
+        if (this.dire === RollingLotteryDirection.横) {
+            this._totalDistV3 = cc.v3(-intervalN * boxDistN + offsetDistV3.x);
         } else {
             this._totalDistV3 = cc.v3(0, intervalN * boxDistN + offsetDistV3.y);
         }
     }
 
-    /** 初始化数据 */
-    private _initData(): void {
-        this.curveComp = this.node.getComponent(BezierCurveAnimation);
-
-        // 设置更新事件
-        let updateEvent = new cc.EventHandler();
-        updateEvent.component = cc.js.getClassName(this);
-        updateEvent.handler = '_eventUpdate';
-        updateEvent.target = this.node;
-        this.curveComp.updateEventAS.push(updateEvent);
-
-        // 设置结束事件
-        let endEvent = new cc.EventHandler();
-        endEvent.component = cc.js.getClassName(this);
-        endEvent.handler = '_eventEnd';
-        endEvent.target = this.node;
-        this.curveComp.endEventAS.push(endEvent);
-
-        this._resetData();
-    }
-
-    /** 重制数据 */
-    private _resetData(): void {
-        this._currIndexN = 0;
-        this._ItemSize = this.node.children[0].getComponent(cc.UITransform).contentSize.clone();
-
-        // item 大小矩形，中心点在节点 (0, 0) 位置
-        this._parentCenterRect = cc.rect(
-            this.node.worldPosition.x - this._ItemSize.width * 0.5,
-            this.node.worldPosition.y - this._ItemSize.height * 0.5,
-            this._ItemSize.width,
-            this._ItemSize.height
-        );
-
-        // 重置数据
-        this._uiTransformTab = Object.create(null);
-        this._uiTransformTab[this.node.uuid] = this.node.getComponent(cc.UITransform);
-        this._selfRect = this._getBoundingBoxToWorld(this.node);
-        this._perimeterV3.set(cc.Vec3.ZERO);
-
-        // 更新 _uiTransformTab, _perimeterV3
-        let itemSize: cc.Size;
-        this.node.children.forEach((v1) => {
-            this._uiTransformTab[v1.uuid] = v1.getComponent(cc.UITransform);
-            itemSize = this._uiTransformTab[v1.uuid].contentSize;
-            this._perimeterV3.add3f(itemSize.x, itemSize.y, 0);
-        });
-    }
-
-    /** 初始化视图 */
-    private _initView(): void {
-        this.node.getComponent(cc.Layout).enabled = false;
-
-        // 初始化子节点及选中
-        if (this.node.children.length) {
-            // 重置子节点
-            this.node.children.forEach((v, kN) => {
-                v.name = String(kN + this._currIndexN);
-                this.itemUpdateEvent.emit([v, kN + this._currIndexN]);
-            });
-
-            this.jump(this._currIndexN);
-        }
-    }
-
-    /** 重制视图 */
-    private _resetView(): void {
-        if (this.node.children.length) {
-            this.jump(this._currIndexN);
-        }
-    }
-
-    /** 初始化事件 */
-    private _initEvent(): void {
-        this.node.on(cc.Node.EventType.CHILD_ADDED, this._nodeChildAdded, this);
-        this.node.on(cc.Node.EventType.CHILD_REMOVED, this._nodeChildRemoved, this);
-    }
-
-    /** 重置 */
-    reset(): void {
-        this._resetData();
-        this._resetView();
+    /** 停止循环 */
+    private _stopLoop(): void {
+        this._loopTween.stop();
+        this._loopTween = null;
+        this._loopScrollB = false;
     }
 
     /**
@@ -392,7 +556,7 @@ export class RollingLottery extends Component {
                             if (!this.isValid) {
                                 return;
                             }
-                            if (this.dire === RollingLotteryDirection.HORIZONTAL) {
+                            if (this.dire === RollingLotteryDirection.横) {
                                 distV3.x = (target.valueN - target.lastValueN) * speedN_;
                             } else {
                                 distV3.y = (target.valueN - target.lastValueN) * speedN_;
@@ -406,14 +570,16 @@ export class RollingLottery extends Component {
             .start();
         if (timeSN_ !== undefined) {
             this.scheduleOnce(() => {
-                this._loopTween.stop();
-                this._loopTween = null;
-                this._loopScrollB = false;
+                this._stopLoop();
             }, timeSN_);
         }
     }
 
-    /** 跳转到指定下标 */
+    /**
+     * 跳转到指定下标
+     * @param indexN_ 目标下标
+     * @returns
+     */
     jump(indexN_: number): void {
         if (this._scrollB && !this._loopScrollB) {
             return;
@@ -423,9 +589,7 @@ export class RollingLottery extends Component {
 
         // 停止循环滚动
         if (this._loopScrollB) {
-            this._loopTween.stop();
-            this._loopTween = null;
-            this._loopScrollB = false;
+            this._stopLoop();
         }
 
         // 更新移动距离
@@ -438,7 +602,12 @@ export class RollingLottery extends Component {
         this._jumpB = false;
     }
 
-    /** 滚动到指定下标 */
+    /**
+     * 滚动到指定下标
+     * @param indexN_ 目标下标
+     * @param scrollConfig_ 滚动配置
+     * @returns
+     */
     scroll(indexN_: number, scrollConfig_?: RollingLotteryScrollConfig): void {
         if (this._scrollB && !this._loopScrollB) {
             return;
@@ -448,9 +617,7 @@ export class RollingLottery extends Component {
 
         // 停止循环滚动
         if (this._loopScrollB) {
-            this._loopTween.stop();
-            this._loopTween = null;
-            this._loopScrollB = false;
+            this._stopLoop();
         }
 
         this._lastCurveYN = 0;
@@ -461,10 +628,8 @@ export class RollingLottery extends Component {
     }
     /* ------------------------------- 自定义事件 ------------------------------- */
     private _eventUpdate(yN_: number, indexN_: number): void {
-        cc.log(yN_, yN_);
-        if (this.dire === RollingLotteryDirection.HORIZONTAL) {
-            cc.error('未实现');
-            // ...
+        if (this.dire === RollingLotteryDirection.横) {
+            this._scrollChild(cc.v3((yN_ - this._lastCurveYN) * this._totalDistV3.x, 0));
         } else {
             this._scrollChild(cc.v3(0, (yN_ - this._lastCurveYN) * this._totalDistV3.y));
         }
@@ -476,13 +641,14 @@ export class RollingLottery extends Component {
         this._scrollB = false;
         this.scrollEndEvent.emit([]);
         this._scrollConfig.endCBF?.();
+        // cc.log('缓动结束');
     }
     /* ------------------------------- 节点事件 ------------------------------- */
     private _nodeChildAdded(): void {
-        this.reset();
+        this._reset();
     }
     private _nodeChildRemoved(): void {
-        this.reset();
+        this._reset();
     }
 }
 
